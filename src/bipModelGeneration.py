@@ -1,10 +1,11 @@
 '''
 Created on Apr 5, 2018
+Updated on Dec 2, 2020
 
 @author: Xu Wang
 '''
 import argparse
-import PhotoScan
+import Metashape
 
 # construct the argument parse and parse the arguments
 ap = argparse.ArgumentParser()
@@ -17,39 +18,48 @@ dem = workingPath+"dem.tif"
 orthomosaic = workingPath+"ortho.tif"
 project = workingPath+"ortho_dem_process.psx"
 
-app = PhotoScan.Application()
-doc = PhotoScan.app.document
+app = Metashape.Application()
+doc = Metashape.app.document
 doc.open(project)
 
-PhotoScan.app.gpu_mask = 1
-# PhotoScan.app.cpu_enable = 8
+Metashape.app.gpu_mask = 15
+Metashape.app.cpu_enable = True
 
 chunk = doc.chunk
-chunk.crs = PhotoScan.CoordinateSystem("EPSG::4326")
+chunk.crs = Metashape.CoordinateSystem("EPSG::4326")
 
-chunk.buildDepthMaps(quality=PhotoScan.HighQuality, filter=PhotoScan.AggressiveFiltering)
+chunk.buildDepthMaps(downscale=1, filter_mode=Metashape.AggressiveFiltering)
 
 chunk.buildDenseCloud()
 
-chunk.buildModel(surface=PhotoScan.HeightField, interpolation=PhotoScan.DisabledInterpolation, face_count=PhotoScan.FaceCount.HighFaceCount)
+chunk.buildModel(surface_type=Metashape.HeightField, interpolation=Metashape.DisabledInterpolation, face_count=Metashape.HighFaceCount)
 
 doc.save(path=project, chunks=[doc.chunk])
 
-doc = PhotoScan.app.document
+doc = Metashape.app.document
 doc.open(project)
-app = PhotoScan.Application()
+app = Metashape.Application()
 
 # PhotoScan.app.cpu_enable = 8
 
 chunk = doc.chunk
-chunk.crs = PhotoScan.CoordinateSystem("EPSG::4326")
+chunk.crs = Metashape.CoordinateSystem("EPSG::4326")
 
-chunk.buildDem(source=PhotoScan.DataSource.DenseCloudData, interpolation=PhotoScan.Interpolation.DisabledInterpolation, projection=PhotoScan.CoordinateSystem("EPSG::4326"))
+proj = Metashape.OrthoProjection()
+proj.crs = Metashape.CoordinateSystem("EPSG::4326")
 
-chunk.buildOrthomosaic(surface=PhotoScan.DataSource.ElevationData, blending=PhotoScan.BlendingMode.MosaicBlending, projection=PhotoScan.CoordinateSystem("EPSG::4326"))
+chunk.buildDem(source_data=Metashape.DataSource.DenseCloudData, interpolation=Metashape.Interpolation.DisabledInterpolation, projection=proj)
 
-chunk.exportDem(dem, image_format=PhotoScan.ImageFormatTIFF, projection=PhotoScan.CoordinateSystem("EPSG::4326"), nodata=-9999, write_kml=False, write_world=False, tiff_big=False)
+chunk.buildOrthomosaic(surface_data=Metashape.DataSource.ElevationData, blending_mode=Metashape.BlendingMode.MosaicBlending, projection=proj)
 
-chunk.exportOrthomosaic(orthomosaic, image_format=PhotoScan.ImageFormatTIFF, raster_transform=PhotoScan.RasterTransformType.RasterTransformNone, projection=PhotoScan.CoordinateSystem("EPSG::4326"), write_kml=False, write_world=False, tiff_compression=PhotoScan.TiffCompressionNone, tiff_big=False)
+compr = Metashape.ImageCompression()
+compr.tiff_compression = Metashape.ImageCompression.TiffCompressionNone
+compr.tiff_big = False
+compr.tiff_overviews = False
+compr.tiff_tiled = False
+
+chunk.exportRaster(path=dem, image_format=Metashape.ImageFormatTIFF, projection=proj, nodata_value=-9999, save_kml=False, save_world=False, image_compression=compr, white_background=False, source_data=Metashape.ElevationData)
+
+chunk.exportRaster(path=orthomosaic, image_format=Metashape.ImageFormatTIFF, projection=proj, save_kml=False, save_world=False, image_compression=compr, white_background=False, source_data=Metashape.OrthomosaicData)
 
 doc.save(path=project, chunks=[doc.chunk])

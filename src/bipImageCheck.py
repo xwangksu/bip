@@ -1,5 +1,7 @@
 '''
 Created on Apr 5, 2018
+Updated on Dec 2, 2020
+Updated on May 9, 2022
 
 @author: Xu Wang
 '''
@@ -39,11 +41,17 @@ print("Total images in the path: %d" % len(imList))
 # Remove questionable images
 # Round I: check image file size
 print("R1 check")
-r2List=[]
+r1List=[]
 for im in imList:
     fs = os.path.getsize(im)
     if fs > 2000000:
-        r2List.append(im)
+        r1List.append(im)
+r2List = []
+with exiftool.ExifTool() as et:
+    for im in r1List:
+        if et.get_tag('GPS:GPSAltitude',im) != None:
+            r2List.append(im)
+
 # Round II: check completeness
 print("R2 check")
 imNum = 99999
@@ -101,44 +109,44 @@ with exiftool.ExifTool() as et:
         tgFile = filePath+"\\renamed\\"+dtTags+"_"+imFile
         newFile = shutil.copy2(im,tgFile)
         print("Copying %s" % newFile)
-#------------------------------------------------------------------------
-# Calculate altitude
-alti_min = numpy.min(alti)
-alti_mean = numpy.mean(alti)
-alti_th = alti_min + 0.5*(alti_mean-alti_min)
-with open(logname, 'a') as logoutput:
-    logoutput.write("Altitude threshold: %.3f\n" % alti_th)
-print("Altitude threshold: %.3f" % alti_th)
-# Create low path
-try:
-    os.makedirs(filePath+"\\low_altitude")
-    print("Creating LOW directory.")
-except OSError as exception:
-    if exception.errno != errno.EEXIST:
-        raise
-renamedIm = os.listdir(filePath+"\\renamed")
-blueIm = []
-for im in renamedIm:
-    if im.find("_1.tif") != -1:
-        blueIm.append(im)
-acc = 0
-with exiftool.ExifTool() as et:
-    for im in blueIm:
-        alti = float(et.get_tag('GPS:GPSAltitude',filePath+"\\renamed\\"+im))
-        if alti < alti_th:
-            # Move to low directory
-            newFile = shutil.move(filePath+"\\renamed\\"+im, filePath+"\\low_altitude\\"+im)
-            print("Moving %s" % newFile)
-            newFile = shutil.move(filePath+"\\renamed\\"+im.replace("_1.tif","_2.tif"), filePath+"\\low_altitude\\"+im.replace("_1.tif","_2.tif"))
-            print("Moving %s" % newFile)
-            newFile = shutil.move(filePath+"\\renamed\\"+im.replace("_1.tif","_3.tif"), filePath+"\\low_altitude\\"+im.replace("_1.tif","_3.tif"))
-            print("Moving %s" % newFile)
-            newFile = shutil.move(filePath+"\\renamed\\"+im.replace("_1.tif","_4.tif"), filePath+"\\low_altitude\\"+im.replace("_1.tif","_4.tif"))
-            print("Moving %s" % newFile)
-            newFile = shutil.move(filePath+"\\renamed\\"+im.replace("_1.tif","_5.tif"), filePath+"\\low_altitude\\"+im.replace("_1.tif","_5.tif"))
-            print("Moving %s" % newFile)
-            acc += 5
-print("%d files moved to low_altitude" % acc)
-with open(logname, 'a') as logoutput:
-    logoutput.write("%d files moved to low_altitude\n" % acc)
-#------------------------------------------------------------------------
+# #------------------------------------------------------------------------
+# # Calculate altitude
+# alti_min = numpy.min(alti)
+# alti_mean = numpy.mean(alti)
+# alti_th = alti_min + 0.5*(alti_mean-alti_min)
+# with open(logname, 'a') as logoutput:
+#     logoutput.write("Altitude threshold: %.3f\n" % alti_th)
+# print("Altitude threshold: %.3f" % alti_th)
+# # Create low path
+# try:
+#     os.makedirs(filePath+"\\low_altitude")
+#     print("Creating LOW directory.")
+# except OSError as exception:
+#     if exception.errno != errno.EEXIST:
+#         raise
+# renamedIm = os.listdir(filePath+"\\renamed")
+# blueIm = []
+# for im in renamedIm:
+#     if im.find("_1.tif") != -1:
+#         blueIm.append(im)
+# acc = 0
+# with exiftool.ExifTool() as et:
+#     for im in blueIm:
+#         alti = float(et.get_tag('GPS:GPSAltitude',filePath+"\\renamed\\"+im))
+#         if alti < alti_th:
+#             # Move to low directory
+#             newFile = shutil.move(filePath+"\\renamed\\"+im, filePath+"\\low_altitude\\"+im)
+#             print("Moving %s" % newFile)
+#             newFile = shutil.move(filePath+"\\renamed\\"+im.replace("_1.tif","_2.tif"), filePath+"\\low_altitude\\"+im.replace("_1.tif","_2.tif"))
+#             print("Moving %s" % newFile)
+#             newFile = shutil.move(filePath+"\\renamed\\"+im.replace("_1.tif","_3.tif"), filePath+"\\low_altitude\\"+im.replace("_1.tif","_3.tif"))
+#             print("Moving %s" % newFile)
+#             newFile = shutil.move(filePath+"\\renamed\\"+im.replace("_1.tif","_4.tif"), filePath+"\\low_altitude\\"+im.replace("_1.tif","_4.tif"))
+#             print("Moving %s" % newFile)
+#             newFile = shutil.move(filePath+"\\renamed\\"+im.replace("_1.tif","_5.tif"), filePath+"\\low_altitude\\"+im.replace("_1.tif","_5.tif"))
+#             print("Moving %s" % newFile)
+#             acc += 5
+# print("%d files moved to low_altitude" % acc)
+# with open(logname, 'a') as logoutput:
+#     logoutput.write("%d files moved to low_altitude\n" % acc)
+# #------------------------------------------------------------------------

@@ -1,6 +1,8 @@
 '''
 Created on June 27, 2019
+Updated on Dec 2, 2020
 
+Updated on May 9, 2022
 @author: Xu Wang
 '''
 import os
@@ -20,59 +22,17 @@ from shapely.geometry.polygon import Polygon
 #------------------------------------------------------------------------
 # Parameter settings, MAY NEED MODIFY
 # Calibration panel albedo value
-panelCalibration = { 
-# # TERRA 2016-2017 RP02-1622251-SC
-#     "Blue": 0.66, 
-#     "Green": 0.67, 
-#     "Red": 0.67, 
-#     "Red edge": 0.66, 
-#     "NIR": 0.6
-#---------------------
-# RP02-1603122-SC
-#     "Blue": 0.71, 
-#     "Green": 0.72, 
-#     "Red": 0.72, 
-#     "Red edge": 0.7, 
-#     "NIR": 0.66
-#---------------------
-# RP02-1622013-SC
-#     "Blue": 0.63, 
-#     "Green": 0.64, 
-#     "Red": 0.64, 
-#     "Red edge": 0.63, 
-#     "NIR": 0.59
-#---------------------
-# RP03-1731145-SC
-#     "Blue": 0.53, 
-#     "Green": 0.53, 
-#     "Red": 0.53, 
-#     "Red edge": 0.51, 
-#     "NIR": 0.48
-#---------------------
-# RP03-1731119-SC
-#     "Blue": 0.53, 
-#     "Green": 0.54, 
-#     "Red": 0.53, 
-#     "Red edge": 0.52, 
-#     "NIR": 0.49
-#---------------------
-# RP03-1824474-SC
-    "Blue": 0.53, 
-    "Green": 0.53, 
-    "Red": 0.53, 
-    "Red edge": 0.53, 
-    "NIR": 0.53
-#---------------------
-# RP04-1918130-OB
-#     "Blue": 0.536, 
-#     "Green": 0.536, 
-#     "Red": 0.534, 
-#     "Red edge": 0.533, 
-#     "NIR": 0.529
+panelCalibration = {
+# RP04-1814046-SC
+    "Blue": 0.489,
+    "Green": 0.490,
+    "Red": 0.489,
+    "Red edge": 0.486,
+    "NIR": 0.488
 }
 #------------------------------------------------------------------------
 # For panel detection
-black_th=100 #110
+black_th=90 #110
 # cont_th=13000
 cont_th=0
 #------------------------------------------------------------------------
@@ -82,6 +42,8 @@ def panelSizeEval(im,b_th):
     gray = cv2.cvtColor(resized, cv2.COLOR_BGR2GRAY)
     blurred = cv2.GaussianBlur(gray, (5, 5), 0)
     thresh = cv2.threshold(blurred, b_th, 255, cv2.THRESH_BINARY)[1]
+#     cv2.imshow("Image", thresh)
+#     cv2.waitKey(0)
     cnts = cv2.findContours(thresh.copy(), cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
     cnts = cnts[0] if imutils.is_cv2() else cnts[1]
     sd = ShapeDetector()
@@ -95,13 +57,14 @@ def panelSizeEval(im,b_th):
             shape = sd.detect(c)
         if shape == "square":
             ca = cv2.contourArea(c)
-            if (ca>2000) and (ca<8000):
+            # print(ca)
+            if (ca>4000) and (ca<20500):
                 # print(ca)
                 sq +=1
                 # cSize = cSize + ca
                 cSize = ca
     if sq == 0:
-        return 4000
+        return 0
     else:
         return cSize
 #------------------------------------------------------------------------
@@ -126,7 +89,7 @@ def panelDetect(im,b_th,ct_th):
             shape = sd.detect(c)
         if shape == "square":
             ca = cv2.contourArea(c)
-            if (ca>ct_th-1500) and (ca<ct_th+1500):
+            if (ca>ct_th-2000) and (ca<ct_th+2000):
                 sq +=1
                 c = c.astype("float")
                 c *= ratio
@@ -135,6 +98,8 @@ def panelDetect(im,b_th,ct_th):
                 approx = cv2.approxPolyDP(c, 0.04 * peri, True)
                 cv2.drawContours(image, [c], -1, (0, 255, 0), 1)
                 cv2.putText(image, shape, (cX, cY), cv2.FONT_HERSHEY_SIMPLEX,0.5, (255, 255, 255), 1)
+#                 cv2.imshow("Image", image)
+#                 cv2.waitKey(0)
     if sq == 1:
         return approx
     else:
@@ -165,14 +130,14 @@ if acc > 0:
     imageFiles = os.listdir(filePath+"\\low_altitude")
     exiftoolPath = None
     if os.name == 'nt':
-        exiftoolPath = 'D:/ExifTool/exiftool.exe'
-    # Sum of each band's radiance 
+        exiftoolPath = 'C:/Users/xuwang/Downloads/exiftool/exiftool.exe'
+    # Sum of each band's radiance
     sbr_B = 0
     sbr_G = 0
     sbr_R = 0
     sbr_E = 0
     sbr_N = 0
-    # Num of each band's radiance 
+    # Num of each band's radiance
     nbr_B = 0
     nbr_G = 0
     nbr_R = 0
@@ -188,6 +153,8 @@ if acc > 0:
             pSizeList.append(panelSize)
     pSizeArray = numpy.asarray(pSizeList)
     bn = int((pSizeArray.max()-pSizeArray.min())/5)
+    if bn>20:
+        bn = 20
     hist, bin_edges = numpy.histogram(pSizeList, bins=bn, density=False)
     cont_th = bin_edges[numpy.argmax(hist)+1]
     print("Panel contour size is close to %s" % (int)(cont_th))

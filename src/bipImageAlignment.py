@@ -1,11 +1,33 @@
 '''
-Created on Apr 5, 2018
+Created on May 9, 2022
 
 @author: Xu Wang
 '''
 import os
 import argparse
-import PhotoScan
+import Metashape
+
+# construct the argument parse and parse the arguments
+ap = argparse.ArgumentParser()
+ap.add_argument("-wp", "--wpath", required=True, help="workingPath")
+args = vars(ap.parse_args())
+workingPath = args["wpath"]
+print("Working path is: %s" % workingPath)
+srcImagePath = workingPath
+project = workingPath+"\\ortho_dem_process.psx"
+
+files = os.listdir(srcImagePath+"\\renamed\\")
+file_list=[]
+
+for file in files:
+    if file.endswith(".tif"):
+        filePath = srcImagePath +"\\renamed\\"+ file
+        file_list.append(filePath)
+
+# fileGroups = [5]*(len(file_list)//5)
+
+app = Metashape.Application()
+doc = Metashape.app.document
 
 # construct the argument parse and parse the arguments
 ap = argparse.ArgumentParser()
